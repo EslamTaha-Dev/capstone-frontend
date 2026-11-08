@@ -1,5 +1,3 @@
-@"
-
 # GEMINI.md
 
 Context and conventions for the AI assistant working in this repo.
@@ -29,4 +27,4 @@ Frontend capstone for the FlyRank Frontend AI Engineering track. The project ide
 - Explain a change before making it
 - Do not install new dependencies without asking
 - Keep changes focused on what was requested
-  "@ | Set-Content GEMINI.md
+
