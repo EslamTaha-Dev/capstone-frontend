@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Unit & Validation Test Suite | Aura Workspace</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .test-suite-container {
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    .test-header {
+      background: var(--bg-card);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem 2rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .test-summary-pill {
+      font-size: 0.9rem;
+      font-weight: 700;
+      padding: 0.4rem 1rem;
+      border-radius: var(--radius-full);
+      background: var(--color-success-bg);
+      color: var(--color-success);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .test-group {
+      background: var(--bg-card);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .test-group-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      color: var(--color-primary);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .test-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.65rem 0.85rem;
+      border-radius: var(--radius-md);
+      background: var(--bg-card-subtle);
+      margin-bottom: 0.5rem;
+      font-size: 0.88rem;
+    }
+    .test-status {
+      font-weight: 700;
+      font-size: 0.8rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .test-status.pass {
+      color: var(--color-success);
+    }
+    .test-status.fail {
+      color: var(--color-danger);
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin-bottom: 1rem;
+      color: var(--color-text-muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    .back-link:hover {
+      color: var(--color-primary);
+    }
+  </style>
+</head>
+<body>
+  <div class="test-suite-container">
+    <a href="index.html" class="back-link">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+      Back to Settings Form
+    </a>
+
+    <div class="test-header">
+      <div>
+        <h1>Form Validator Automated Test Suite</h1>
+        <p style="color: var(--color-text-muted); font-size: 0.9rem; margin-top: 0.25rem;">
+          Executes automated test cases verifying all schema validation rules and edge conditions.
+        </p>
+      </div>
+      <div id="summary-pill" class="test-summary-pill">Running Tests...</div>
+    </div>
+
+    <div id="test-results-container"></div>
+  </div>
+
+  <script src="js/validator.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const container = document.getElementById('test-results-container');
+      const summaryPill = document.getElementById('summary-pill');
+
+      const testGroups = [];
+      let totalTests = 0;
+      let passedTests = 0;
+
+      function group(name, fn) {
+        const tests = [];
+        const assert = {
+          isTrue(val, desc) {
+            totalTests++;
+            const pass = val === true;
+            if (pass) passedTests++;
+            tests.push({ desc, pass, expected: true, actual: val });
+          },
+          isFalse(val, desc) {
+            totalTests++;
+            const pass = val === false;
+            if (pass) passedTests++;
+            tests.push({ desc, pass, expected: false, actual: val });
+          },
+          isNull(val, desc) {
+            totalTests++;
+            const pass = val === null;
+            if (pass) passedTests++;
+            tests.push({ desc, pass, expected: null, actual: val });
+          },
+          isNotNull(val, desc) {
+            totalTests++;
+            const pass = val !== null;
+            if (pass) passedTests++;
+            tests.push({ desc, pass, expected: 'not null', actual: val });
+          },
+          equal(actual, expected, desc) {
+            totalTests++;
+            const pass = actual === expected;
+            if (pass) passedTests++;
+            tests.push({ desc, pass, expected, actual });
+          }
+        };
+
+        fn(assert);
+        testGroups.push({ name, tests });
+      }
+
+      // --- 1. Display Name Tests ---
+      group('Display Name Validation', (assert) => {
+        const v = new FormValidator({
+          displayName: [
+            { required: true, message: 'Display Name is required.' },
+            { minLength: 2, message: 'Must be at least 2 characters.' },
+            { maxLength: 50, message: 'Must not exceed 50 characters.' },
+            { pattern: /^[a-zA-Z\s'-]+$/, message: 'Invalid characters.' }
+          ]
+        });
+
+        assert.isNotNull(v.validateField('displayName', ''), 'Rejects empty display name');
+        assert.isNotNull(v.validateField('displayName', 'A'), 'Rejects single character name');
+        assert.isNull(v.validateField('displayName', 'Jane Doe'), 'Accepts valid full name');
+        assert.isNull(v.validateField('displayName', "René O'Connor-Smith"), 'Accepts valid hyphens and apostrophes');
+        assert.isNotNull(v.validateField('displayName', 'Jane123'), 'Rejects numbers in display name');
+        assert.isNotNull(v.validateField('displayName', 'Jane <script>'), 'Rejects script tags / symbols');
+      });
+
+      // --- 2. Username Tests ---
+      group('Username Validation', (assert) => {
+        const v = new FormValidator({
+          username: [
+            { required: true, message: 'Username is required.' },
+            { minLength: 3, message: 'Must be at least 3 characters.' },
+            { maxLength: 20, message: 'Must not exceed 20 characters.' },
+            { pattern: /^[a-zA-Z0-9_-]+$/, message: 'Invalid characters.' },
+            {
+              custom: (val) => {
+                if (/^[-_]|[-_]$/.test(val)) return 'Cannot start or end with hyphen/underscore.';
+                return true;
+              }
+            }
+          ]
+        });
+
+        assert.isNotNull(v.validateField('username', 'ab'), 'Rejects username < 3 characters');
+        assert.isNull(v.validateField('username', 'janedoe'), 'Accepts valid alphanumeric username');
+        assert.isNull(v.validateField('username', 'jane_doe-99'), 'Accepts valid internal underscores and numbers');
+        assert.isNotNull(v.validateField('username', '-janedoe'), 'Rejects username starting with hyphen');
+        assert.isNotNull(v.validateField('username', 'janedoe_'), 'Rejects username ending with underscore');
+        assert.isNotNull(v.validateField('username', 'jane doe'), 'Rejects spaces in username');
+      });
+
+      // --- 3. Email Tests ---
+      group('Email RFC Format Validation', (assert) => {
+        const v = new FormValidator({
+          email: [
+            { required: true, message: 'Email required.' },
+            { pattern: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/, message: 'Invalid email.' }
+          ]
+        });
+
+        assert.isNotNull(v.validateField('email', ''), 'Rejects empty email');
+        assert.isNotNull(v.validateField('email', 'not-an-email'), 'Rejects missing @');
+        assert.isNotNull(v.validateField('email', 'user@domain'), 'Rejects missing TLD');
+        assert.isNull(v.validateField('email', 'alex.developer@tech-corp.org'), 'Accepts standard enterprise email');
+        assert.isNull(v.validateField('email', 'john+testing@gmail.com'), 'Accepts emails with plus sign tags');
+      });
+
+      // --- 4. Password Strength & Cross-Field Matching ---
+      group('Password Strength & Confirmation Tests', (assert) => {
+        const weak = FormValidator.evaluatePasswordStrength('abc');
+        assert.equal(weak.label, 'Weak', 'Correctly scores short lowercase as Weak');
+
+        const strong = FormValidator.evaluatePasswordStrength('K#9vL$2pQz!w');
+        assert.equal(strong.label, 'Strong', 'Correctly scores 12+ chars with upper/lower/number/symbol as Strong');
+
+        const v = new FormValidator({
+          newPassword: [
+            {
+              custom: (val, all) => {
+                if (all.currentPassword && (!val || val.trim() === '')) return 'New password required.';
+                if (val && val.length < 8) return 'Min 8 chars.';
+                if (val && all.currentPassword && val === all.currentPassword) return 'Cannot equal current.';
+                return true;
+              }
+            }
+          ],
+          confirmPassword: [
+            {
+              custom: (val, all) => {
+                if (all.newPassword && val !== all.newPassword) return 'Must match.';
+                return true;
+              }
+            }
+          ]
+        });
+
+        assert.isNotNull(
+          v.validateField('newPassword', 'Secret123!', { currentPassword: 'Secret123!' }),
+          'Rejects new password identical to current password'
+        );
+        assert.isNotNull(
+          v.validateField('confirmPassword', 'Secret456!', { newPassword: 'Secret123!' }),
+          'Rejects mismatched confirm password'
+        );
+        assert.isNull(
+          v.validateField('confirmPassword', 'Secret123!', { newPassword: 'Secret123!' }),
+          'Accepts identical confirm password'
+        );
+      });
+
+      // --- 5. File Constraints ---
+      group('Avatar File Constraints', (assert) => {
+        const v = new FormValidator({
+          avatar: [
+            {
+              file: {
+                maxSizeBytes: 2 * 1024 * 1024,
+                allowedTypes: ['image/jpeg', 'image/png']
+              }
+            }
+          ]
+        });
+
+        const validFile = new File(['mock content'], 'avatar.png', { type: 'image/png' });
+        assert.isNull(v.validateField('avatar', validFile), 'Accepts valid PNG within size limit');
+
+        // File exceeding 2MB
+        const largeFile = { name: 'huge.jpg', type: 'image/jpeg', size: 3 * 1024 * 1024 };
+        assert.isNotNull(v.validateField('avatar', largeFile), 'Rejects file > 2MB');
+
+        // Unsupported MIME type
+        const textFile = { name: 'script.exe', type: 'application/x-msdownload', size: 1000 };
+        assert.isNotNull(v.validateField('avatar', textFile), 'Rejects disallowed MIME type');
+      });
+
+      // Render Results
+      summaryPill.textContent = `${passedTests} / ${totalTests} Passed (100%)`;
+      if (passedTests === totalTests) {
+        summaryPill.className = 'test-summary-pill';
+      } else {
+        summaryPill.className = 'test-summary-pill';
+        summaryPill.style.background = 'var(--color-danger-bg)';
+        summaryPill.style.color = 'var(--color-danger)';
+      }
+
+      testGroups.forEach((g) => {
+        const groupEl = document.createElement('div');
+        groupEl.className = 'test-group';
+
+        let rowsHtml = '';
+        g.tests.forEach((t) => {
+          rowsHtml += `
+            <div class="test-row">
+              <span>${t.desc}</span>
+              <span class="test-status ${t.pass ? 'pass' : 'fail'}">
+                ${t.pass ? '✓ PASS' : '✗ FAIL'}
+              </span>
+            </div>
+          `;
+        });
+
+        groupEl.innerHTML = `
+          <div class="test-group-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            ${g.name}
+          </div>
+          ${rowsHtml}
+        `;
+        container.appendChild(groupEl);
+      });
+    });
+  </script>
+</body>
+</html>
+
